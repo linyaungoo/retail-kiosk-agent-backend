@@ -5,11 +5,17 @@ HTTPS with an `X-Kiosk-Key`. The service calls OpenAI and reads the Google Sheet
 keys stay in Secret Manager and never reach the kiosk.
 
 ```
-Flutter kiosk ──HTTPS + X-Kiosk-Key──▶ Cloud Run: retail-kiosk-backend ──▶ OpenAI (STT, agent, TTS)
-                                          │  identity: kiosk-sheets-reader@…
-                                          ├──▶ Google Sheets (PRODUCTS / STORES / FAQ)
-                                          └──◀ Secret Manager (OpenAI key, kiosk keys, admin key)
+Flutter kiosk ──HTTPS + X-Kiosk-Key──▶ Cloud Run: retail-kiosk-backend ──▶ OpenAI (STT, agent, TTS,
+     │                                    │  identity: kiosk-sheets-reader@…    Realtime calls + sideband)
+     │                                    ├──▶ Google Sheets (PRODUCTS / STORES / FAQ / KIOSKS)
+     │                                    └──◀ Secret Manager (OpenAI key, kiosk keys, admin key)
+     └──WebRTC audio (realtime mode)──▶ OpenAI Realtime
 ```
+
+In realtime mode the audio goes straight from the kiosk to OpenAI over WebRTC
+(UDP, TCP/TLS 443 fallback). Cloud Run only creates the call and runs the tools
+over an outbound WebSocket, so request timeouts don't limit a conversation. If a
+store network blocks WebRTC, the app falls back to push-to-talk over HTTPS.
 
 Commands are for **PowerShell** on Windows with the
 [gcloud CLI](https://cloud.google.com/sdk/docs/install). You can also run them in
@@ -58,12 +64,13 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com `
    ```powershell
    Read-Host "OpenAI API key" | gcloud secrets create openai-api-key --data-file=-
    ```
-2. **Kiosk keys.** Create one random key per kiosk, comma-separated. Each kiosk sends
-   its key as `X-Kiosk-Key`:
+2. **Kiosk keys.** Create one random key per kiosk and bind it to the kiosk ID
+   (`KIOSK-001:<key>`, comma-separated). Each kiosk sends its key as `X-Kiosk-Key`.
+   A bound key can't be used to act as another kiosk:
    ```powershell
    $k1 = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
    $k1   # put this on KIOSK-001
-   "$k1" | gcloud secrets create kiosk-api-keys --data-file=-
+   "KIOSK-001:$k1" | gcloud secrets create kiosk-api-keys --data-file=-
    ```
 3. **Admin key** for `/admin/cache` and `/admin/cache/refresh`:
    ```powershell
@@ -90,6 +97,11 @@ foreach ($s in "openai-api-key", "kiosk-api-keys", "admin-api-key") {
 as Viewer, and Cloud Run will run as that account. Nothing more to do.
 
 If you use a different service account, share the sheet with it as **Viewer**.
+
+**Add a `KIOSKS` tab** before deploying. `deploy/cloudrun.env.yaml` sets
+`KIOSK_REGISTRY_REQUIRED=true`, so only kiosks listed there can connect. Columns:
+`kiosk_id, store_id, name, active` (import [sample_data/KIOSKS.csv](../sample_data/KIOSKS.csv)
+to start). The kiosk's store comes from this tab; the app can't choose it.
 
 ## 5. Deploy
 
@@ -141,17 +153,27 @@ Then run a full voice turn from your PC, with a kiosk key from step 3:
 python -m scripts.try_voice samples/stt_synthetic --url $URL --kiosk-key "<kiosk key>" --pause 15 --quiet
 ```
 
+And a realtime call (WebRTC from your PC; needs `pip install -r requirements-dev.txt`):
+
+```powershell
+python -m scripts.try_realtime samples/realtime_tests/t3_hs_where_my.mp3 --url $URL --kiosk-key "<kiosk key>"
+```
+
 Expected behaviour in production:
 
 - `/docs` and `/openapi.json` return 404.
 - `/admin/*` needs `X-Admin-Key`.
 - A request without `X-Kiosk-Key` gets 401.
+- A kiosk that isn't in the `KIOSKS` tab, or a key bound to another kiosk, gets 403.
+- `GET /api/kiosk/config` reports `"voice_mode": "realtime"`.
 
 ## 7. Operate
 
 | Task | How |
 |---|---|
 | **Logs** | `gcloud run services logs read $SERVICE --region $REGION --limit 50`. In Logs Explorer, filter with `resource.type="cloud_run_revision" jsonPayload.message="voice_completed"`. Each turn logs `stt_ms`, `agent_ms`, `tts_first_byte_ms`, `first_audio_ms`, token counts and `templated`. |
+| **Realtime calls** | `jsonPayload.message="realtime_call_ended"`: one line per conversation with `reason` (`client_ended`, `idle_timeout`, `max_duration`, `replaced`, `remote_closed`, `session_tampered`), duration, turns, tool calls, interruptions and the app's first-audio metrics. `realtime_tool` logs each tool call with its backend time. |
+| **Cost control** | `REALTIME_IDLE_TIMEOUT_SECONDS` (hang up after silence), `REALTIME_MAX_SESSION_SECONDS`, `REALTIME_MAX_CONCURRENT_CALLS`. To switch every kiosk to push-to-talk: `--update-env-vars VOICE_MODE=chained`; apps pick it up at the next start. |
 | **Errors** | Logs are JSON with `severity`, so filter `severity>=ERROR`. Exceptions carry `stack_trace` and are picked up by Error Reporting. |
 | **Sheet edited** | The data is picked up within `CACHE_TTL_SECONDS` (5 min). To reload now: `Invoke-RestMethod "$URL/admin/cache/refresh" -Method Post -Headers @{"X-Admin-Key"="<admin key>"}`. |
 | **Cache status** | `Invoke-RestMethod "$URL/admin/cache" -Headers @{"X-Admin-Key"="<admin key>"}` |
@@ -177,12 +199,17 @@ OpenAI, and neither is known in advance. Measure from the store's network:
 
 ## 9. Flutter integration
 
+The [kiosk-mobile](https://github.com/linyaungoo/kiosk-mobile) app's GitHub Actions
+workflow builds the APK with these as repository variables and secrets
+(`BACKEND_URL`, `VOICE_MODE`, `KIOSK_ID`, `KIOSK_API_KEY`).
+
 | Setting | Value |
 |---|---|
 | Base URL | `$URL` from step 6, over HTTPS |
-| Header on every API call | `X-Kiosk-Key: <this kiosk's key>`. Store it in the device's secure storage, never in source control. |
-| Voice endpoint | `POST /api/kiosk/voice` (multipart): `audio`, `organization_id`, `store_id`, `kiosk_id`, `session_id`, `language` |
-| Response | Streamed audio body. Metadata is in `X-Kiosk-Response` (base64url JSON); see the README. |
+| Header on every API call | `X-Kiosk-Key: <this kiosk's key>`. Never in source control. |
+| Mode | `GET /api/kiosk/config` returns `voice_mode`, `realtime_available` and `chained_available` |
+| Realtime | `POST /api/realtime/session` with `kiosk_id`, `session_id`, `language` and the WebRTC `sdp` offer. Returns the SDP answer and the greeting event. End with `POST /api/realtime/session/{id}/end`. |
+| Push-to-talk | `POST /api/kiosk/voice` (multipart): `audio`, `kiosk_id`, `session_id`, `language`. Returns a streamed audio body; metadata is in `X-Kiosk-Response` (base64url JSON). See the README. |
 | Never on the device | OpenAI or Google credentials |
 
 ## 10. Cost notes
@@ -191,9 +218,15 @@ OpenAI, and neither is known in advance. Measure from the store's network:
   second it runs, roughly tens of USD per month. Check the
   [Cloud Run pricing calculator](https://cloud.google.com/products/calculator) for
   `asia-southeast1`.
-- **OpenAI.** Each turn makes 1 transcription, 1 agent call (~1,100 input and ~50 output
-  tokens) and 1 speech clip. The TTS clip cache removes repeated clips. Exact token
-  counts per turn are in the `agent_completed` logs.
+- **OpenAI, push-to-talk.** Each turn makes 1 transcription, 1 agent call (~1,100
+  input and ~50 output tokens) and 1 speech clip. The TTS clip cache removes repeated
+  clips. Exact token counts per turn are in the `agent_completed` logs.
+- **OpenAI, realtime.** Billed per audio token for as long as the call is open,
+  including the greeting and silence that the model hears. Keep the idle timeout
+  short (60 s default) and end the call as soon as the customer walks away.
+  Compare a week of realtime usage against push-to-talk on the OpenAI usage page
+  before rolling out widely; `VOICE_MODE=chained` switches back without an app
+  update.
 - **Google Sheets and Secret Manager.** At this volume they fall within free tiers or
   close to them.
 
@@ -216,9 +249,9 @@ docker run --rm -p 8081:8080 --env-file .env `
 
 - **More than one instance** needs a shared session store such as Redis. The code has a
   `SessionStore` interface ready for it.
-- **Server-side kiosk-to-store mapping.** Today the kiosk sends its own `store_id`, which
-  is validated against the sheet. A kiosk key should map to a fixed store on the server.
-- **Per-kiosk rate limiting.**
+- **Per-kiosk rate limiting** (realtime has a global call cap and one call per kiosk).
+- **On-device testing** of realtime mode on the store network (WebRTC through the
+  store's firewall, echo cancellation with the kiosk's speaker).
 - **Burmese TTS provider evaluation** (e.g. Azure `my-MM` neural voices).
 - **Testing with real store recordings** in place of synthetic ones.
 - **A CI pipeline** to run `pytest`, `ruff` and `mypy` and deploy on merge.

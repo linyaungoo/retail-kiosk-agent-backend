@@ -1,8 +1,21 @@
 # Sample data
 
-Fictional POC data for the `PRODUCTS`, `STORES` and `FAQ` worksheets. Import each CSV
-into the tab with the same name (File → Import → Upload → Replace current sheet).
-Replace it with real store data before any customer-facing test.
+Fictional POC data for the `PRODUCTS`, `STORES`, `FAQ` and `KIOSKS` worksheets. Import
+each CSV into the tab with the same name (File → Import → Upload → Replace current
+sheet). Replace it with real store data before any customer-facing test.
+
+## KIOSKS tab (kiosk → store registry)
+
+| Column | Example | Meaning |
+|---|---|---|
+| `kiosk_id` | KIOSK-001 | The ID the app sends (and its key is bound to) |
+| `store_id` | STORE-001 | The store this kiosk serves. The app can't override it. |
+| `name` | Downtown entrance | For people |
+| `active` | TRUE | FALSE blocks the kiosk |
+
+The tab is optional in development: without it, kiosks use the `store_id` they send.
+With `KIOSK_REGISTRY_REQUIRED=true` (production), only listed, active kiosks can
+connect. KIOSK-099 is an inactive sample row.
 
 The automated tests in `tests/` use these files, so update the tests when you change them.
 
