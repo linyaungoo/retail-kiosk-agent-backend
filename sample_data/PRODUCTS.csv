@@ -1,0 +1,39 @@
+product_id,sku,barcode,name,brand,category,store_id,zone,aisle,rack,shelf,availability,price,active
+P001,CC-1L,100001,Coca Cola 1L,Coca Cola,Beverages,STORE-001,Beverages,A03,R02,S02,AVAILABLE,1800,TRUE
+P002,CC-330,100002,Coca Cola Can 330ml,Coca Cola,Beverages,STORE-001,Beverages,A03,R02,S03,AVAILABLE,900,TRUE
+P007,CC-1.5L,100007,Coca Cola 1.5L,Coca Cola,Beverages,STORE-001,Beverages,A03,R02,S01,AVAILABLE,2500,TRUE
+P008,CCZ-330,100008,Coca Cola Zero Can 330ml,Coca Cola,Beverages,STORE-001,Beverages,A03,R03,S03,LOW_STOCK,1000,TRUE
+P032,CC-VAN-330,100032,Coca Cola Vanilla Can 330ml,Coca Cola,Beverages,STORE-001,Beverages,A03,R03,S04,AVAILABLE,1100,FALSE
+P009,PEP-1L,100009,Pepsi 1L,Pepsi,Beverages,STORE-001,Beverages,A03,R04,S02,AVAILABLE,1700,TRUE
+P010,SPR-1L,100010,Sprite 1L,Sprite,Beverages,STORE-001,Beverages,A03,R03,S02,AVAILABLE,1700,TRUE
+P011,ALP-1L,100011,Alpine Drinking Water 1L,Alpine,Beverages,STORE-001,Beverages,A04,R01,S01,AVAILABLE,500,TRUE
+P012,MAX-ORG-350,100012,Max Plus Orange 350ml,Max Plus,Beverages,STORE-001,Beverages,A04,R02,S03,AVAILABLE,800,TRUE
+P013,RYD-ELEC,100013,Royal-D Electrolyte Drink Powder,Royal-D,Beverages,STORE-001,Beverages,A04,R03,S02,AVAILABLE,300,TRUE
+P005,NES-COF-3IN1,100005,Nescafe 3in1 Coffee Mix 30 sticks,Nescafe,Beverages,STORE-001,Beverages,A04,R01,S02,LOW_STOCK,6500,TRUE
+P014,PRM-COF-3IN1,100014,Premier 3in1 Coffee Mix 30 sticks,Premier,Beverages,STORE-001,Beverages,A04,R01,S03,AVAILABLE,5500,TRUE
+P003,HS-SHMP-400,100003,Head & Shoulders Anti-Dandruff Shampoo 400ml,Head & Shoulders,Personal Care,STORE-001,Personal Care,A07,R01,S03,AVAILABLE,8500,TRUE
+P015,HS-SHMP-170,100015,Head & Shoulders Cool Menthol Shampoo 170ml,Head & Shoulders,Personal Care,STORE-001,Personal Care,A07,R01,S02,AVAILABLE,4200,TRUE
+P016,SUN-SHMP-320,100016,Sunsilk Smooth & Manageable Shampoo 320ml,Sunsilk,Personal Care,STORE-001,Personal Care,A07,R01,S04,AVAILABLE,5800,TRUE
+P017,PAN-SHMP-340,100017,Pantene Pro-V Shampoo 340ml,Pantene,Personal Care,STORE-001,Personal Care,A07,R02,S01,OUT_OF_STOCK,7200,TRUE
+P004,CLG-TP-150,100004,Colgate Total Toothpaste 150g,Colgate,Personal Care,STORE-001,Personal Care,A07,R03,S01,AVAILABLE,3200,TRUE
+P018,CLG-MF-160,100018,Colgate MaxFresh Toothpaste 160g,Colgate,Personal Care,STORE-001,Personal Care,A07,R03,S02,AVAILABLE,2900,TRUE
+P019,CLG-TB-SOFT,100019,Colgate Slim Soft Toothbrush,Colgate,Personal Care,STORE-001,Personal Care,A07,R03,S03,AVAILABLE,1500,TRUE
+P020,CLS-TP-160,100020,Close Up Red Hot Toothpaste 160g,Close Up,Personal Care,STORE-001,Personal Care,A07,R03,S04,AVAILABLE,2600,TRUE
+P021,LUX-SOAP-110,100021,Lux Soft Touch Soap 110g,Lux,Personal Care,STORE-001,Personal Care,A07,R04,S01,AVAILABLE,1200,TRUE
+P022,DET-SOAP-125,100022,Dettol Original Soap 125g,Dettol,Personal Care,STORE-001,Personal Care,A07,R04,S02,AVAILABLE,1400,TRUE
+P006,SUN-DW-500,100006,Sunlight Dishwashing Liquid 500ml,Sunlight,Household,STORE-001,Household,A09,R02,S01,OUT_OF_STOCK,2800,TRUE
+P023,OMO-DET-1KG,100023,Omo Washing Powder 1kg,Omo,Household,STORE-001,Household,A09,R01,S01,AVAILABLE,4800,TRUE
+P024,DET-LIQ-500,100024,Dettol Antiseptic Liquid 500ml,Dettol,Household,STORE-001,Household,A09,R03,S02,AVAILABLE,6800,TRUE
+P025,MAMA-CHK,100025,Mama Instant Noodles Chicken,Mama,Food,STORE-001,Noodles & Snacks,A05,R01,S02,AVAILABLE,450,TRUE
+P026,MAMA-PRK,100026,Mama Instant Noodles Pork,Mama,Food,STORE-001,Noodles & Snacks,A05,R01,S03,AVAILABLE,450,TRUE
+P027,YUM-TOMYUM,100027,Yum Yum Shrimp Tom Yum Noodles,Yum Yum,Food,STORE-001,Noodles & Snacks,A05,R01,S04,LOW_STOCK,400,TRUE
+P030,LAYS-CLS-50,100030,Lay's Classic Potato Chips 50g,Lay's,Snacks,STORE-001,Noodles & Snacks,A05,R03,S01,AVAILABLE,1000,TRUE
+P031,OREO-CHOC-133,100031,Oreo Chocolate Cookies 133g,Oreo,Snacks,STORE-001,Noodles & Snacks,A05,R03,S02,AVAILABLE,1800,TRUE
+P028,RICE-PAWSAN-5KG,100028,Shwe Bo Paw San Rice 5kg,Shwe Bo,Food,STORE-001,Rice & Cooking,A06,R01,S01,AVAILABLE,18500,TRUE
+P029,OIL-PALM-1L,100029,Sun Gold Palm Cooking Oil 1L,Sun Gold,Food,STORE-001,Rice & Cooking,A06,R02,S02,AVAILABLE,3500,TRUE
+P001,CC-1L,100001,Coca Cola 1L,Coca Cola,Beverages,STORE-002,Drinks,B02,R01,S03,AVAILABLE,1800,TRUE
+P003,HS-SHMP-400,100003,Head & Shoulders Anti-Dandruff Shampoo 400ml,Head & Shoulders,Personal Care,STORE-002,Health & Beauty,B05,R02,S01,OUT_OF_STOCK,8500,TRUE
+P004,CLG-TP-150,100004,Colgate Total Toothpaste 150g,Colgate,Personal Care,STORE-002,Health & Beauty,B05,R03,S02,AVAILABLE,3200,TRUE
+P011,ALP-1L,100011,Alpine Drinking Water 1L,Alpine,Beverages,STORE-002,Drinks,B01,R01,S01,AVAILABLE,500,TRUE
+P025,MAMA-CHK,100025,Mama Instant Noodles Chicken,Mama,Food,STORE-002,Groceries,B03,R02,S01,AVAILABLE,450,TRUE
+P033,WALLS-CRN-VAN,100033,Wall's Cornetto Vanilla Ice Cream,Wall's,Frozen,STORE-002,Frozen,B07,R01,S01,AVAILABLE,1500,TRUE

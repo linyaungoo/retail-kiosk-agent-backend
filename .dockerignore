@@ -1,0 +1,24 @@
+# Keep the image small and free of secrets/customer data.
+.git/
+.venv/
+venv/
+.env
+.env.*
+credentials/
+samples/
+tests/
+scripts/
+docs/
+deploy/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.ogg
+.idea/
+.vscode/

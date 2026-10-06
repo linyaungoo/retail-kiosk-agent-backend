@@ -1,0 +1,20 @@
+# Files NOT uploaded by `gcloud run deploy --source .` / `gcloud builds submit`.
+# (Without this file gcloud would derive the list from .gitignore.)
+.gcloudignore
+.git/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+credentials/
+samples/
+**/__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.ogg

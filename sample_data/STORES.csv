@@ -1,0 +1,5 @@
+store_id,organization_id,name,opening_time,closing_time,customer_service_location,parking_available,restroom_available,active
+STORE-001,ORG-001,Demo Store Downtown,08:00,21:00,Ground floor near the main entrance,TRUE,TRUE,TRUE
+STORE-002,ORG-001,Demo Store Hlaing,09:00,22:00,Second floor next to the escalator,FALSE,TRUE,TRUE
+STORE-003,ORG-002,Partner Mart Mandalay,07:00,20:00,Next to the cashier counters,TRUE,FALSE,TRUE
+STORE-004,ORG-001,Demo Store Old Branch,08:00,20:00,Ground floor,TRUE,TRUE,FALSE
