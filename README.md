@@ -228,7 +228,7 @@ Time from the end of the customer's speech to the first audio byte, measured on
 | **First audio, new question** | **6.1 s** (worst 9 s) | **3.8–4.0 s** |
 | **First audio, repeated question** | — | **2.4 s** (TTS clip cache) |
 
-What changed:
+What changed in Phase 8:
 
 - **Template answers.** For product location, store hours, parking, restroom, BMI and
   "need height/weight", Python renders the answer from the tool result, and the
@@ -249,6 +249,34 @@ Recommended on the Flutter side:
   for the full download.
 - **Fast end-of-speech detection.** Use voice activity detection (VAD) so recording stops
   about 0.5 s after the customer finishes speaking. A fixed recording length wastes time.
+
+### Chained vs realtime (same recordings)
+
+The same 8 Burmese recordings, played as one conversation in each mode, from the
+development PC (2026-10-06). The questions cover products, an FAQ, BMI in one turn and
+in two turns, a vague question, an unknown product and another store. Chained
+used `try_voice --conversation`; realtime used `try_realtime`.
+
+| | Chained (push-to-talk) | Realtime |
+|---|---|---|
+| **First audio, median** | **3.6 s** | **1.25 s** |
+| First audio, worst | 9.6 s (FAQ, slow LLM call) | 1.64 s |
+| Correct tool / answer | 8 / 8 | 8 / 8 in the benchmark run, but see the BMI note |
+
+How each mode was timed:
+
+- **Chained:** from sending the recording to the first audio byte. A real
+  push-to-talk kiosk also waits for the customer to release the button.
+- **Realtime:** from the end of the customer's speech to the first assistant audio.
+  This includes the 500 ms of silence the VAD waits for.
+- **What the first audio is:** for tool questions, realtime's first audio is the
+  filler "ခဏလေးနော်။". The answer follows about 1 s later, when the tool result is
+  back. Chained's first audio is the answer itself.
+
+**BMI caveat.** Once in 4 repeated runs of BMI → "height 170 cm" → "70 kg" in one call,
+the realtime model invented a weight (100 kg) instead of asking for it or reusing
+70. The other runs asked or reused correctly. A backend check that tool numbers
+appear in the customer's transcript is the planned fix.
 
 ## Speech-to-text
 
