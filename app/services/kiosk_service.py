@@ -22,6 +22,7 @@ async def resolve_kiosk(
     organization_id: str | None = None,
     store_id: str | None = None,
     registry_required: bool = False,
+    fallback_store_id: str | None = None,
 ) -> KioskContext:
     """Decide which store/organization this kiosk serves; never trust the client for it.
 
@@ -29,7 +30,8 @@ async def resolve_kiosk(
     2. A kiosk in the KIOSKS registry serves the registry's store; any store_id /
        organization_id the client sends is ignored (and logged if different).
     3. Unregistered kiosks are rejected when `registry_required` (production);
-       otherwise (development) the client's store_id is validated and used.
+       otherwise (development) the client's store_id is validated and used, or
+       `fallback_store_id` when the client sends none (the kiosk app doesn't).
     """
     if principal.kiosk_id is not None and principal.kiosk_id != kiosk_id:
         logger.warning(
@@ -43,8 +45,8 @@ async def resolve_kiosk(
     elif registry_required:
         logger.warning("kiosk_not_registered", extra={"kiosk_id": kiosk_id})
         raise _invalid("This kiosk is not registered.")
-    elif store_id:
-        trusted_store_id = store_id
+    elif store_id or fallback_store_id:
+        trusted_store_id = store_id or fallback_store_id or ""
     else:
         raise _invalid()
 

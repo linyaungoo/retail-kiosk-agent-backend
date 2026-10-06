@@ -13,7 +13,8 @@ sheet). Replace it with real store data before any customer-facing test.
 | `name` | Downtown entrance | For people |
 | `active` | TRUE | FALSE blocks the kiosk |
 
-The tab is optional in development: without it, kiosks use the `store_id` they send.
+The tab is optional in development: without it, kiosks use the `store_id` they send,
+or `DEFAULT_STORE_ID` (STORE-001) when they send none.
 With `KIOSK_REGISTRY_REQUIRED=true` (production), only listed, active kiosks can
 connect. KIOSK-099 is an inactive sample row.
 

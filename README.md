@@ -108,7 +108,8 @@ The kiosk sends `X-Kiosk-Key` when `KIOSK_AUTH_ENABLED=true`.
   registered kiosk, the store comes from the tab; any `store_id` the app sends is
   ignored and logged (`client_store_ignored`). Inactive kiosks are rejected.
 - **Production.** With `KIOSK_REGISTRY_REQUIRED=true`, unregistered kiosks get 403.
-  In development they fall back to the `store_id` they send.
+  In development they use the `store_id` they send, or `DEFAULT_STORE_ID` when they
+  send none (the kiosk app never does).
 - **The model never chooses the store.** Tools read the store, organisation and
   language from the trusted context. The model only supplies the query, topic or
   measurements. Asked about "STORE-002" at a STORE-001 kiosk, it answers with

@@ -32,6 +32,7 @@ async def run_agent(
             repository,
             principal=principal,
             registry_required=settings.kiosk_registry_required,
+            fallback_store_id=settings.default_store_id,
             organization_id=body.organization_id,
             store_id=body.store_id,
             kiosk_id=body.kiosk_id,

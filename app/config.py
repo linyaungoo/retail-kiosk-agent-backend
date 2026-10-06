@@ -92,6 +92,8 @@ class Settings(BaseSettings):
 
     # Trusted kiosk context defaults
     default_organization_id: str = "ORG-001"
+    # Development only (KIOSK_REGISTRY_REQUIRED=false): store for a kiosk that isn't in
+    # the KIOSKS tab and sends no store_id. Empty = such kiosks are rejected.
     default_store_id: str = "STORE-001"
 
     # Cache

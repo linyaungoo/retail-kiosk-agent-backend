@@ -62,6 +62,24 @@ async def test_unregistered_kiosk_in_dev_needs_valid_store(
         await _resolve(repository, kiosk_id="KIOSK-DEV")  # no store at all
 
 
+async def test_unregistered_kiosk_in_dev_falls_back_to_default_store(
+    repository: InMemoryBusinessRepository,
+) -> None:
+    # The kiosk app never sends a store_id; in development it gets DEFAULT_STORE_ID.
+    ctx = await _resolve(repository, kiosk_id="KIOSK-DEV", fallback_store_id="STORE-003")
+    assert ctx.store_id == "STORE-003"
+    # A store the client does send still wins (validated).
+    ctx = await _resolve(
+        repository, kiosk_id="KIOSK-DEV", store_id="STORE-002", fallback_store_id="STORE-003"
+    )
+    assert ctx.store_id == "STORE-002"
+    # Production: the fallback never applies.
+    with pytest.raises(AppError):
+        await _resolve(
+            repository, kiosk_id="KIOSK-DEV", fallback_store_id="STORE-001", registry_required=True
+        )
+
+
 async def test_bound_key_cannot_act_as_other_kiosk(
     repository: InMemoryBusinessRepository,
 ) -> None:

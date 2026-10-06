@@ -109,6 +109,7 @@ async def kiosk_voice(
         repository,
         principal=principal,
         registry_required=settings.kiosk_registry_required,
+        fallback_store_id=settings.default_store_id,
         organization_id=organization_id,
         store_id=store_id,
         kiosk_id=kiosk_id,

@@ -72,6 +72,7 @@ async def create_session(
         repository,
         principal=principal,
         registry_required=settings.kiosk_registry_required,
+        fallback_store_id=settings.default_store_id,
         kiosk_id=body.kiosk_id,
         session_id=body.session_id,
         language=body.language,
