@@ -58,6 +58,10 @@ curl http://127.0.0.1:8000/health
 Interactive API docs: http://127.0.0.1:8000/docs. They are disabled when
 `APP_ENV=production`.
 
+**Web test console:** http://127.0.0.1:8000/console/ (development only). Enter any
+backend URL and try realtime voice, push-to-talk, the agent, STT, TTS and the admin
+endpoints from the browser. See [web/README.md](web/README.md).
+
 Health endpoints:
 
 - `GET /health` is liveness: the process is up.
@@ -328,6 +332,7 @@ deploy/       Cloud Run environment config
 docs/         deployment guide
 scripts/      try_agent / try_stt / try_tts / try_voice / try_realtime, lock_requirements
 sample_data/  PRODUCTS / STORES / FAQ / KIOSKS CSVs (Google Sheet import + test fixtures)
+web/          browser test console (served at /console in development)
 tests/        offline tests; *_live.py run real APIs with RUN_LIVE_TESTS=1
 ```
 

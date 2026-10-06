@@ -148,6 +148,13 @@ class Settings(BaseSettings):
     # Request limits
     max_audio_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
 
+    # Browser test console (web/, served at /console). Unset = on in development only.
+    web_console_enabled: bool | None = None
+    # Browser origins allowed to call the API cross-origin (CORS), comma-separated,
+    # e.g. "http://localhost:5500". Empty = none. Not needed for /console (same origin)
+    # or for the Flutter app (not a browser).
+    cors_allowed_origins: str = ""
+
     @field_validator("openai_api_key", "kiosk_api_keys", "admin_api_key", mode="before")
     @classmethod
     def _clean_secret(cls, value: object) -> object:
@@ -156,6 +163,21 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return value.strip() or None
         return value
+
+    @field_validator("web_console_enabled", mode="before")
+    @classmethod
+    def _empty_is_unset(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    def console_enabled(self) -> bool:
+        if self.web_console_enabled is not None:
+            return self.web_console_enabled
+        return self.app_env == "development"
+
+    def cors_origins(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.cors_allowed_origins.split(",") if o.strip()]
 
     def kiosk_key_bindings(self) -> dict[str, str | None]:
         """key -> bound kiosk_id (None = unbound key). Entries: "KIOSK-001:<key>" or "<key>"."""

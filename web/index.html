@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kiosk API Console</title>
+  <meta name="description" content="Manual test console for the retail kiosk voice backend.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%232563eb'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span>Kiosk API Console</span>
+    </div>
+    <div id="server-status" class="server-status" aria-live="polite">Not checked</div>
+  </header>
+
+  <main class="layout">
+    <!-- Connection and identity -->
+    <aside class="panel settings" aria-label="Settings">
+      <section>
+        <h2>Backend</h2>
+        <label>API URL
+          <input id="api-url" type="url" spellcheck="false" autocomplete="off" placeholder="http://127.0.0.1:8010">
+        </label>
+        <button id="check-btn" type="button" class="primary wide">Check connection</button>
+        <div id="check-result" class="chips"></div>
+        <p id="context-warning" class="warning" hidden></p>
+      </section>
+
+      <section>
+        <h2>Kiosk</h2>
+        <label>Kiosk key <span class="muted">X-Kiosk-Key</span>
+          <input id="kiosk-key" type="password" autocomplete="off" placeholder="empty if auth is off">
+        </label>
+        <label>Kiosk ID
+          <input id="kiosk-id" spellcheck="false" autocomplete="off">
+        </label>
+        <label>Store ID <span class="muted">ignored for registered kiosks</span>
+          <input id="store-id" spellcheck="false" autocomplete="off" placeholder="from the KIOSKS tab">
+        </label>
+        <label>Language
+          <select id="language">
+            <option value="my-MM">မြန်မာ (my-MM)</option>
+            <option value="en-US">English (en-US)</option>
+          </select>
+        </label>
+        <label>Session ID
+          <span class="input-row">
+            <input id="session-id" spellcheck="false" autocomplete="off">
+            <button id="new-session" type="button" title="Start a new customer session">New</button>
+          </span>
+        </label>
+      </section>
+
+      <section>
+        <h2>Admin</h2>
+        <label>Admin key <span class="muted">X-Admin-Key</span>
+          <input id="admin-key" type="password" autocomplete="off" placeholder="not needed in development">
+        </label>
+        <label class="check"><input id="remember-keys" type="checkbox"> Remember keys in this browser</label>
+      </section>
+    </aside>
+
+    <!-- Tests -->
+    <section class="panel work" aria-label="Tests">
+      <nav class="tabs" role="tablist">
+        <button role="tab" type="button" data-tab="realtime" aria-selected="true">Realtime voice</button>
+        <button role="tab" type="button" data-tab="voice" aria-selected="false">Push-to-talk</button>
+        <button role="tab" type="button" data-tab="agent" aria-selected="false">Agent</button>
+        <button role="tab" type="button" data-tab="stt" aria-selected="false">STT</button>
+        <button role="tab" type="button" data-tab="tts" aria-selected="false">TTS</button>
+        <button role="tab" type="button" data-tab="admin" aria-selected="false">Admin</button>
+      </nav>
+
+      <!-- Realtime -->
+      <div class="tab-panel" data-panel="realtime" role="tabpanel">
+        <p class="lead">Hands-free conversation over WebRTC, as the kiosk does it. The backend creates the call and runs the tools.</p>
+        <div class="toolbar">
+          <div class="segmented" role="radiogroup" aria-label="Customer audio">
+            <label><input type="radio" name="rt-source" value="mic" checked> Microphone</label>
+            <label><input type="radio" name="rt-source" value="file"> Audio files</label>
+          </div>
+          <label class="check"><input id="rt-greeting" type="checkbox" checked> Greeting</label>
+          <span class="spacer"></span>
+          <button id="rt-start" type="button" class="primary">Start conversation</button>
+          <button id="rt-mute" type="button" disabled>Mute</button>
+          <button id="rt-stop" type="button" class="danger" disabled>End</button>
+        </div>
+
+        <div class="rt-status">
+          <div id="rt-state" class="state-pill" data-state="idle">Idle</div>
+          <div class="meters">
+            <span>Mic</span><div id="rt-mic-meter" class="meter" role="presentation"></div>
+            <span>Assistant</span><div id="rt-out-meter" class="meter" role="presentation"></div>
+          </div>
+        </div>
+        <p id="rt-session-info" class="muted small"></p>
+
+        <div id="rt-file-controls" class="file-controls" hidden>
+          <label class="file-pick">Choose recordings
+            <input id="rt-files" type="file" accept="audio/*" multiple>
+          </label>
+          <div id="rt-file-list" class="chips"></div>
+          <p class="muted small">Start the conversation, then press a recording to say it into the call. Press another while the assistant talks to test barge-in.</p>
+        </div>
+
+        <form id="rt-text-form" class="inline-form">
+          <input id="rt-text" placeholder="Or type a question (answered by voice)" autocomplete="off" disabled>
+          <button type="submit" disabled>Send</button>
+        </form>
+
+        <dl id="rt-metrics" class="metrics"></dl>
+
+        <div class="split">
+          <div id="rt-conversation" class="conversation" aria-live="polite"></div>
+          <div class="events">
+            <div class="events-head">
+              <h3>Events</h3>
+              <label class="check small"><input id="rt-all-events" type="checkbox"> deltas</label>
+            </div>
+            <ol id="rt-events" class="event-list"></ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- Push-to-talk -->
+      <div class="tab-panel" data-panel="voice" role="tabpanel" hidden>
+        <p class="lead"><code>POST /api/kiosk/voice</code>: recording → STT → assistant → TTS. The fallback mode.</p>
+        <div class="toolbar">
+          <button id="ptt-record" type="button" class="primary record">Record</button>
+          <span class="muted">or</span>
+          <label class="file-pick">Audio file <input id="ptt-file" type="file" accept="audio/*"></label>
+          <button id="ptt-send-file" type="button">Send file</button>
+          <span class="spacer"></span>
+          <label class="inline">Response
+            <select id="ptt-mode">
+              <option value="audio">audio stream</option>
+              <option value="json">JSON</option>
+            </select>
+          </label>
+          <button id="ptt-clear" type="button" class="ghost">Clear</button>
+        </div>
+        <div id="ptt-conversation" class="conversation tall" aria-live="polite"></div>
+      </div>
+
+      <!-- Agent -->
+      <div class="tab-panel" data-panel="agent" role="tabpanel" hidden>
+        <p class="lead"><code>POST /api/agent</code>: text in, answer and tool data out. Same session = follow-up questions work.</p>
+        <div id="agent-examples" class="chips examples"></div>
+        <form id="agent-form" class="inline-form">
+          <input id="agent-text" placeholder="Ask the assistant…" autocomplete="off">
+          <button type="submit" class="primary">Send</button>
+        </form>
+        <div class="toolbar">
+          <label class="check"><input id="agent-speak" type="checkbox"> Speak answers (TTS)</label>
+          <span class="spacer"></span>
+          <button id="agent-clear" type="button" class="ghost">Clear</button>
+        </div>
+        <div id="agent-conversation" class="conversation tall" aria-live="polite"></div>
+      </div>
+
+      <!-- STT -->
+      <div class="tab-panel" data-panel="stt" role="tabpanel" hidden>
+        <p class="lead"><code>POST /api/stt</code>: speech to text only.</p>
+        <div class="toolbar">
+          <button id="stt-record" type="button" class="primary record">Record</button>
+          <span class="muted">or</span>
+          <label class="file-pick">Audio file <input id="stt-file" type="file" accept="audio/*"></label>
+          <button id="stt-send-file" type="button">Transcribe file</button>
+        </div>
+        <div id="stt-results" class="results"></div>
+      </div>
+
+      <!-- TTS -->
+      <div class="tab-panel" data-panel="tts" role="tabpanel" hidden>
+        <p class="lead"><code>POST /api/tts</code>: text to streamed speech.</p>
+        <textarea id="tts-text" rows="3" maxlength="1000"></textarea>
+        <div class="toolbar">
+          <button id="tts-speak" type="button" class="primary">Speak</button>
+        </div>
+        <div id="tts-results" class="results"></div>
+      </div>
+
+      <!-- Admin -->
+      <div class="tab-panel" data-panel="admin" role="tabpanel" hidden>
+        <p class="lead">Business data cache and readiness. Admin endpoints need the admin key outside development.</p>
+        <div class="toolbar">
+          <button id="admin-status" type="button">Cache status</button>
+          <button id="admin-refresh" type="button" class="primary">Reload sheet now</button>
+          <button id="admin-ready" type="button">Readiness</button>
+          <button id="admin-config" type="button">Kiosk config</button>
+        </div>
+        <pre id="admin-output" class="output">Press a button.</pre>
+      </div>
+    </section>
+
+    <!-- Request log -->
+    <section class="panel log" aria-label="Request log">
+      <div class="log-head">
+        <h2>Requests</h2>
+        <button id="clear-log" type="button" class="ghost">Clear</button>
+      </div>
+      <div id="request-log" class="log-list"></div>
+    </section>
+  </main>
+</body>
+</html>

@@ -161,7 +161,9 @@ python -m scripts.try_realtime samples/realtime_tests/t3_hs_where_my.mp3 --url $
 
 Expected behaviour in production:
 
-- `/docs` and `/openapi.json` return 404.
+- `/docs`, `/openapi.json` and the `/console` test page return 404. For a staging
+  service, `--update-env-vars WEB_CONSOLE_ENABLED=true` turns the console on (see
+  [web/README.md](../web/README.md)).
 - `/admin/*` needs `X-Admin-Key`.
 - A request without `X-Kiosk-Key` gets 401.
 - A kiosk that isn't in the `KIOSKS` tab, or a key bound to another kiosk, gets 403.

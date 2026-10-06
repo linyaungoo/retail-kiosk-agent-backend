@@ -9,11 +9,14 @@ import re
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
 from agents import set_tracing_disabled
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI
+from starlette.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.api import admin, agent, health, kiosk, realtime, stt, tts, voice
@@ -44,6 +47,16 @@ from app.utils.logging import configure_logging, get_logger, request_id_var
 from app.utils.timing import Timer
 
 logger = get_logger(__name__)
+
+WEB_CONSOLE_DIR = Path(__file__).resolve().parent.parent / "web"
+# Response headers a cross-origin browser page may read.
+CORS_EXPOSED_HEADERS = [
+    "X-Request-ID",
+    "X-Kiosk-Response",
+    "X-Action",
+    "X-TTS-First-Byte-Ms",
+    "X-TTS-Provider",
+]
 
 _VALID_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
@@ -251,9 +264,19 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if docs else None,
         openapi_url="/openapi.json" if docs else None,
     )
-    # Added first = innermost; RequestContext stays outermost so 413s are logged too.
+    # Added first = innermost; RequestContext wraps the app so 413s are logged too.
     app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_audio_bytes + 1_048_576)
     app.add_middleware(RequestContextMiddleware)
+    if origins := settings.cors_origins():
+        # Outermost, so error responses (401, 413, ...) are readable by the browser too.
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_methods=["GET", "POST"],
+            allow_headers=["Content-Type", "X-Kiosk-Key", "X-Admin-Key", "X-Request-ID"],
+            expose_headers=CORS_EXPOSED_HEADERS,
+            max_age=600,
+        )
     register_error_handlers(app)
 
     app.include_router(health.router)
@@ -264,6 +287,8 @@ def create_app() -> FastAPI:
     app.include_router(realtime.router)
     app.include_router(kiosk.router)
     app.include_router(admin.router)
+    if settings.console_enabled() and WEB_CONSOLE_DIR.is_dir():
+        app.mount("/console", StaticFiles(directory=WEB_CONSOLE_DIR, html=True), name="console")
     return app
 
 

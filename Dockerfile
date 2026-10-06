@@ -32,6 +32,8 @@ COPY --from=build /opt/venv /opt/venv
 COPY app ./app
 # Only used when BUSINESS_DATA_SOURCE=mock (local testing); production reads Google Sheets.
 COPY sample_data ./sample_data
+# Browser test console; served only when WEB_CONSOLE_ENABLED=true outside development.
+COPY web ./web
 RUN python -m compileall -q app
 USER app
 EXPOSE 8080
