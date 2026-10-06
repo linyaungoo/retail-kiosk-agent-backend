@@ -3,7 +3,13 @@
 from fastapi import APIRouter, Depends
 
 from app.config import Settings
-from app.dependencies import AgentServiceDep, RepositoryDep, SettingsDep, verify_kiosk_key
+from app.dependencies import (
+    AgentServiceDep,
+    KioskPrincipalDep,
+    RepositoryDep,
+    SettingsDep,
+    verify_kiosk_key,
+)
 from app.models.agent import AgentRequest, AgentResponse, Timing, ToolCallInfo
 from app.services.agent_service import AgentReply
 from app.services.kiosk_service import resolve_kiosk
@@ -19,10 +25,13 @@ async def run_agent(
     repository: RepositoryDep,
     agent: AgentServiceDep,
     settings: SettingsDep,
+    principal: KioskPrincipalDep,
 ) -> AgentResponse:
     with Timer() as total:
         kiosk = await resolve_kiosk(
             repository,
+            principal=principal,
+            registry_required=settings.kiosk_registry_required,
             organization_id=body.organization_id,
             store_id=body.store_id,
             kiosk_id=body.kiosk_id,

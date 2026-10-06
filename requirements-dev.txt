@@ -4,3 +4,5 @@ pytest-asyncio>=0.24
 ruff>=0.7
 mypy>=1.13
 packaging>=24.0  # scripts/lock_requirements.py
+aiortc>=1.15  # scripts/try_realtime.py: WebRTC test client
+numpy>=2.0

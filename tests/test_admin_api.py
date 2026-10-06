@@ -35,7 +35,7 @@ def _override_settings(**updates: object) -> None:
 def test_cache_status(client: TestClient) -> None:
     body = client.get("/admin/cache").json()
     assert body["success"] is True and body["source"] == "mock" and body["loaded"] is True
-    assert body["counts"] == {"products": 37, "stores": 3, "faqs": 11}
+    assert body["counts"] == {"products": 37, "stores": 3, "faqs": 11, "kiosks": 3}
 
 
 def test_manual_refresh(client: TestClient) -> None:

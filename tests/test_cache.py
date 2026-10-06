@@ -178,4 +178,4 @@ async def test_manual_refresh_reloads_even_when_fresh(
     await cache.get()
     await cache.refresh()
     assert _version(await cache.get()) == 2
-    assert cache.status()["counts"] == {"products": 0, "stores": 1, "faqs": 0}
+    assert cache.status()["counts"] == {"products": 0, "stores": 1, "faqs": 0, "kiosks": 0}

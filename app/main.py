@@ -16,7 +16,8 @@ from fastapi import FastAPI
 from openai import AsyncOpenAI
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from app.api import admin, agent, health, stt, tts, voice
+from app.api import admin, agent, health, kiosk, realtime, stt, tts, voice
+from app.api.stt import stt_vocabulary
 from app.config import Settings, TTSProviderName, get_settings
 from app.data.csv_source import CsvDataSource
 from app.data.repository import InMemoryBusinessRepository
@@ -24,6 +25,7 @@ from app.data.sources import BusinessDataSource
 from app.errors import register_error_handlers
 from app.middleware import BodySizeLimitMiddleware
 from app.models.kiosk import Language
+from app.realtime.service import RealtimeService
 from app.services.agent_service import AgentService
 from app.services.cache_service import BusinessDataCache
 from app.services.google_sheets_service import GoogleSheetsDataSource, GoogleTokenProvider
@@ -200,6 +202,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.stt = create_stt(settings, client)
     app.state.tts = create_tts(settings, client)
 
+    # Realtime voice: same repository and tools as the chained mode.
+    app.state.realtime = None
+    if client is not None and settings.openai_realtime_model:
+
+        async def vocabulary() -> tuple[str, ...]:
+            return await stt_vocabulary(cache, settings.stt_catalog_vocabulary)
+
+        app.state.realtime = RealtimeService(client, settings, app.state.repository, vocabulary)
+
     logger.info(
         "startup",
         extra={
@@ -207,11 +218,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "agent_model": settings.openai_agent_model,
             "stt": app.state.stt.name if app.state.stt is not None else None,
             "tts": _tts_providers(settings) if app.state.tts is not None else None,
+            "realtime_model": settings.openai_realtime_model or None,
+            "voice_mode": settings.voice_mode,
             "data_source": cache.source_name,
             "data_loaded": cache.status()["loaded"],
         },
     )
     yield
+    if app.state.realtime is not None:
+        await app.state.realtime.shutdown()  # hang up live calls
     for task in background:
         task.cancel()
     await asyncio.gather(*background, return_exceptions=True)
@@ -246,6 +261,8 @@ def create_app() -> FastAPI:
     app.include_router(agent.router)
     app.include_router(tts.router)
     app.include_router(voice.router)
+    app.include_router(realtime.router)
+    app.include_router(kiosk.router)
     app.include_router(admin.router)
     return app
 

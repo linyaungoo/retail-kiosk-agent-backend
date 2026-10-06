@@ -52,6 +52,20 @@ class Store(BaseModel):
     active: bool = True
 
 
+class KioskRecord(BaseModel):
+    """A registered kiosk device and the store it is installed in (KIOSKS tab).
+
+    The store a kiosk serves is decided here, server-side, never by the client.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    kiosk_id: str
+    store_id: str
+    name: str = ""
+    active: bool = True
+
+
 class FaqEntry(BaseModel):
     model_config = ConfigDict(frozen=True)
 

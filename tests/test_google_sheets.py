@@ -45,7 +45,7 @@ def _sample_response() -> dict[str, Any]:
         "spreadsheetId": SHEET_ID,
         "valueRanges": [
             {"range": f"{t}!A1:Z1000", "majorDimension": "ROWS", "values": _sheet_values(t)}
-            for t in ("PRODUCTS", "STORES", "FAQ")
+            for t in ("PRODUCTS", "STORES", "FAQ", "KIOSKS")
         ],
     }
 
@@ -66,7 +66,9 @@ async def test_loads_same_data_as_csv(business_data: BusinessData) -> None:
 
     data = await _source(handler).load()
 
-    assert data.counts() == business_data.counts() == {"products": 37, "stores": 3, "faqs": 11}
+    assert data.counts() == business_data.counts()
+    assert data.counts() == {"products": 37, "stores": 3, "faqs": 11, "kiosks": 3}
+    assert data.kiosks["KIOSK-002"].store_id == "STORE-002"
     coke = next(i.product for i in data.products_by_store["STORE-001"] if i.product.sku == "CC-1L")
     assert (coke.barcode, coke.price, coke.aisle) == ("100001", 1800, "A03")
     assert data.stores["STORE-002"].parking_available is False
@@ -76,7 +78,7 @@ async def test_loads_same_data_as_csv(business_data: BusinessData) -> None:
     assert len(requests) == 1
     request = requests[0]
     assert request.url.path == f"/v4/spreadsheets/{SHEET_ID}/values:batchGet"
-    assert request.url.params.get_list("ranges") == ["PRODUCTS", "STORES", "FAQ"]
+    assert request.url.params.get_list("ranges") == ["PRODUCTS", "STORES", "FAQ", "KIOSKS"]
     assert request.url.params["valueRenderOption"] == "UNFORMATTED_VALUE"
     assert request.url.params["dateTimeRenderOption"] == "FORMATTED_STRING"
     assert request.headers["Authorization"] == "Bearer test-token"
@@ -111,7 +113,7 @@ async def test_network_error_is_wrapped() -> None:
 
 async def test_unexpected_tab_count() -> None:
     body = json.dumps({"valueRanges": [{"values": [["product_id"]]}]})
-    with pytest.raises(DataSourceError, match="expected 3 tabs"):
+    with pytest.raises(DataSourceError, match="expected 4 tabs"):
         await _source(lambda _: httpx.Response(200, text=body)).load()
 
 
@@ -123,3 +125,19 @@ def test_sheet_id_required() -> None:
             http_client=httpx.AsyncClient(),
             timeout_seconds=5,
         )
+
+
+async def test_sheet_without_kiosks_tab_still_loads() -> None:
+    requests: list[httpx.Request] = []
+    body = _sample_response()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if "KIOSKS" in request.url.params.get_list("ranges"):
+            error = {"error": {"code": 400, "message": "Unable to parse range: KIOSKS"}}
+            return httpx.Response(400, json=error)
+        return httpx.Response(200, json={"valueRanges": body["valueRanges"][:3]})
+
+    data = await _source(handler).load()
+    assert len(requests) == 2  # one rejected attempt with KIOSKS, one without
+    assert data.counts()["products"] == 37 and data.kiosks == {}

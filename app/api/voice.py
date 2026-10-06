@@ -20,6 +20,7 @@ from app.api.tts import audio_response
 from app.dependencies import (
     AgentServiceDep,
     CacheDep,
+    KioskPrincipalDep,
     RepositoryDep,
     SettingsDep,
     STTDep,
@@ -83,8 +84,6 @@ def _log_extra(turn: VoiceTurn, payload: VoiceResponse, log_transcripts: bool) -
 )
 async def kiosk_voice(
     audio: Annotated[UploadFile, File(description="Recorded utterance (wav, m4a, mp3, webm, ...)")],
-    organization_id: Annotated[str, Form(pattern=ID_PATTERN)],
-    store_id: Annotated[str, Form(pattern=ID_PATTERN)],
     kiosk_id: Annotated[str, Form(pattern=ID_PATTERN)],
     session_id: Annotated[str, Form(pattern=ID_PATTERN)],
     language: Annotated[Language, Form()],
@@ -94,6 +93,10 @@ async def kiosk_voice(
     repository: RepositoryDep,
     cache: CacheDep,
     settings: SettingsDep,
+    principal: KioskPrincipalDep,
+    # Optional and advisory: a registered kiosk's store comes from the KIOSKS registry.
+    organization_id: Annotated[str | None, Form(pattern=ID_PATTERN)] = None,
+    store_id: Annotated[str | None, Form(pattern=ID_PATTERN)] = None,
     response: Annotated[Literal["audio", "json"], Query()] = "audio",
 ) -> Response:
     request_timer = Timer.started()
@@ -104,6 +107,8 @@ async def kiosk_voice(
     # Reject an unknown/inactive kiosk before paying for speech recognition.
     kiosk = await resolve_kiosk(
         repository,
+        principal=principal,
+        registry_required=settings.kiosk_registry_required,
         organization_id=organization_id,
         store_id=store_id,
         kiosk_id=kiosk_id,

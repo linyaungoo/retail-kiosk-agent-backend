@@ -102,9 +102,43 @@ class Settings(BaseSettings):
     # Admin endpoints (/admin/*): open in development, otherwise require X-Admin-Key.
     admin_api_key: SecretStr | None = None
 
-    # Kiosk auth (X-Kiosk-Key). Optional for the POC.
+    # Kiosk auth (X-Kiosk-Key). Comma-separated keys; "KIOSK-001:<key>" binds a key to
+    # one kiosk (a bound key can only act as that kiosk). Plain "<key>" = unbound.
     kiosk_auth_enabled: bool = False
-    kiosk_api_keys: SecretStr | None = None  # comma-separated
+    kiosk_api_keys: SecretStr | None = None
+    # true: only kiosks listed in the KIOSKS tab may connect (their store comes from
+    # the registry). false (dev): unregistered kiosks fall back to the client's store_id.
+    kiosk_registry_required: bool = False
+
+    # Voice mode the kiosk should use (served by GET /api/kiosk/config):
+    # "realtime" = WebRTC to OpenAI Realtime; "chained" = STT -> agent -> TTS.
+    voice_mode: Literal["chained", "realtime"] = "chained"
+
+    # OpenAI Realtime (WebRTC audio flows kiosk <-> OpenAI; this backend creates the
+    # call with the permanent key and runs tools over a server-side WebSocket).
+    openai_realtime_model: str = ""
+    openai_realtime_voice: str = "marin"
+    realtime_vad: Literal["server_vad", "semantic_vad"] = "server_vad"
+    realtime_vad_threshold: float = Field(default=0.6, ge=0, le=1)
+    realtime_vad_silence_ms: int = Field(default=500, ge=100, le=5000)
+    realtime_vad_prefix_padding_ms: int = Field(default=300, ge=0, le=2000)
+    realtime_vad_eagerness: Literal["low", "medium", "high", "auto"] = "auto"
+    # Kiosk microphones are usually a metre or more away: "far_field"; "" = off.
+    realtime_noise_reduction: Literal["far_field", "near_field", ""] = "far_field"
+    # Transcribe customer speech (for the on-screen bubble and optional logs). Costs extra.
+    realtime_input_transcription_model: str = "gpt-4o-transcribe"
+    realtime_max_output_tokens: int = Field(default=1024, gt=0)
+    # Hang up when nobody has spoken / nothing happened for this long.
+    realtime_idle_timeout_seconds: int = Field(default=60, ge=10)
+    # Hard cap on one customer conversation.
+    realtime_max_session_seconds: int = Field(default=600, ge=30)
+    # Mascot greets first when the conversation starts.
+    realtime_greeting: bool = True
+    realtime_connect_timeout_seconds: float = Field(default=10.0, gt=0)
+    # Business tools offered to the Realtime model (allow-list, comma-separated).
+    realtime_tools: str = "search_product,get_store_info,search_faq,calculate_bmi"
+    # Cost guard: refuse new calls beyond this many at once.
+    realtime_max_concurrent_calls: int = Field(default=20, gt=0)
 
     # Privacy / observability
     log_transcripts: bool = False
@@ -121,11 +155,27 @@ class Settings(BaseSettings):
             return value.strip() or None
         return value
 
-    def kiosk_key_set(self) -> frozenset[str]:
+    def kiosk_key_bindings(self) -> dict[str, str | None]:
+        """key -> bound kiosk_id (None = unbound key). Entries: "KIOSK-001:<key>" or "<key>"."""
         if self.kiosk_api_keys is None:
-            return frozenset()
-        raw = self.kiosk_api_keys.get_secret_value()
-        return frozenset(k.strip() for k in raw.split(",") if k.strip())
+            return {}
+        bindings: dict[str, str | None] = {}
+        for entry in self.kiosk_api_keys.get_secret_value().split(","):
+            entry = entry.strip()
+            if not entry:
+                continue
+            kiosk_id, sep, key = entry.partition(":")
+            if sep and kiosk_id.strip() and key.strip():
+                bindings[key.strip()] = kiosk_id.strip()
+            else:
+                bindings[entry] = None
+        return bindings
+
+    def realtime_tool_names(self) -> frozenset[str]:
+        return frozenset(t.strip() for t in self.realtime_tools.split(",") if t.strip())
+
+    def kiosk_key_set(self) -> frozenset[str]:
+        return frozenset(self.kiosk_key_bindings())
 
 
 @lru_cache

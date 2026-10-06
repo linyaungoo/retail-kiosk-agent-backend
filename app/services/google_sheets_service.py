@@ -1,4 +1,4 @@
-"""Google Sheets data source: PRODUCTS, STORES and FAQ tabs in one API call.
+"""Google Sheets data source: PRODUCTS, STORES, FAQ (and optional KIOSKS) tabs in one API call.
 
 Only the cache calls this (on startup and every CACHE_TTL_SECONDS), never a
 customer request directly.
@@ -14,7 +14,13 @@ from google.auth.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.oauth2 import service_account
 
-from app.data.business_data import FAQ_TABLE, PRODUCTS_TABLE, STORES_TABLE, BusinessData
+from app.data.business_data import (
+    FAQ_TABLE,
+    KIOSKS_TABLE,
+    PRODUCTS_TABLE,
+    STORES_TABLE,
+    BusinessData,
+)
 from app.data.sources import DataSourceError
 from app.utils.logging import get_logger
 from app.utils.timing import Timer
@@ -99,8 +105,19 @@ class GoogleSheetsDataSource:
         self._timeout = httpx.Timeout(timeout_seconds, connect=min(3.0, timeout_seconds))
 
     async def fetch_tables(self) -> dict[str, list[dict[str, Any]]]:
+        """Fetch all tabs in one request. KIOSKS is optional: if the sheet has no such
+        tab, Google rejects the whole request, so retry once without it."""
+        try:
+            return await self._fetch((*TABLES, KIOSKS_TABLE))
+        except DataSourceError as exc:
+            if f"Unable to parse range: {KIOSKS_TABLE}" not in str(exc):
+                raise
+            logger.info("sheets_kiosks_tab_missing")
+            return await self._fetch(TABLES)
+
+    async def _fetch(self, tables: tuple[str, ...]) -> dict[str, list[dict[str, Any]]]:
         params: list[tuple[str, str | int | float | bool | None]] = [
-            ("ranges", table) for table in TABLES
+            ("ranges", table) for table in tables
         ]
         params += [
             ("majorDimension", "ROWS"),
@@ -130,16 +147,16 @@ class GoogleSheetsDataSource:
                 f"Google Sheets returned {response.status_code}: {_google_error(response)}"
             )
         value_ranges = response.json().get("valueRanges", [])
-        if len(value_ranges) != len(TABLES):
-            raise DataSourceError(f"expected {len(TABLES)} tabs, got {len(value_ranges)}")
+        if len(value_ranges) != len(tables):
+            raise DataSourceError(f"expected {len(tables)} tabs, got {len(value_ranges)}")
 
-        tables = {
+        result = {
             table: rows_to_dicts(value_range.get("values", []))
-            for table, value_range in zip(TABLES, value_ranges, strict=True)
+            for table, value_range in zip(tables, value_ranges, strict=True)
         }
-        row_counts = {f"{table.lower()}_rows": len(rows) for table, rows in tables.items()}
+        row_counts = {f"{table.lower()}_rows": len(rows) for table, rows in result.items()}
         logger.info("sheets_fetched", extra={"sheets_ms": timer.ms, **row_counts})
-        return tables
+        return result
 
     async def load(self) -> BusinessData:
         tables = await self.fetch_tables()
@@ -149,4 +166,5 @@ class GoogleSheetsDataSource:
             products=tables[PRODUCTS_TABLE],
             stores=tables[STORES_TABLE],
             faqs=tables[FAQ_TABLE],
+            kiosks=tables.get(KIOSKS_TABLE, []),
         )

@@ -112,7 +112,8 @@ def test_malformed_ids_rejected(client: TestClient) -> None:
     ],
 )
 def test_invalid_kiosk_store(client: TestClient, overrides: dict[str, str]) -> None:
-    response = client.post("/api/agent", json={**VALID, **overrides})
+    # Unregistered kiosk (dev mode): the client-supplied store is validated.
+    response = client.post("/api/agent", json={**VALID, "kiosk_id": "KIOSK-TEST", **overrides})
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "INVALID_KIOSK"
 

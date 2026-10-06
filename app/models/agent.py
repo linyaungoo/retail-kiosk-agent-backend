@@ -11,8 +11,9 @@ ID_PATTERN = r"^[A-Za-z0-9._:-]{1,100}$"
 
 
 class AgentRequest(BaseModel):
-    organization_id: str = Field(pattern=ID_PATTERN, examples=["ORG-001"])
-    store_id: str = Field(pattern=ID_PATTERN, examples=["STORE-001"])
+    # Optional and advisory: a registered kiosk's store comes from the KIOSKS registry.
+    organization_id: str | None = Field(default=None, pattern=ID_PATTERN, examples=["ORG-001"])
+    store_id: str | None = Field(default=None, pattern=ID_PATTERN, examples=["STORE-001"])
     kiosk_id: str = Field(pattern=ID_PATTERN, examples=["KIOSK-001"])
     session_id: str = Field(pattern=ID_PATTERN, examples=["MOBILE-abc123"])
     language: Language = Field(examples=["my-MM"])

@@ -9,6 +9,18 @@ Language = Literal["my-MM", "en-US"]
 _ID_PATTERN = r"^[A-Za-z0-9._:-]{1,100}$"
 
 
+class KioskPrincipal(BaseModel):
+    """Who is calling, as established by X-Kiosk-Key.
+
+    `kiosk_id` is set when the key is bound to one kiosk; such a key cannot act as
+    any other kiosk. None = unbound key, or kiosk auth disabled (development).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    kiosk_id: str | None = None
+
+
 class KioskContext(BaseModel):
     """Identity of the kiosk handling a request.
 

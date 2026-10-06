@@ -4,7 +4,13 @@ import asyncio
 import csv
 from pathlib import Path
 
-from app.data.business_data import FAQ_TABLE, PRODUCTS_TABLE, STORES_TABLE, BusinessData
+from app.data.business_data import (
+    FAQ_TABLE,
+    KIOSKS_TABLE,
+    PRODUCTS_TABLE,
+    STORES_TABLE,
+    BusinessData,
+)
 from app.data.sources import DataSourceError
 
 
@@ -15,12 +21,15 @@ def _read_csv(path: Path) -> list[dict[str | None, str]]:
 
 
 def load_business_data_from_csv(directory: str | Path) -> BusinessData:
-    """Load PRODUCTS.csv, STORES.csv and FAQ.csv. Call once at startup, not per request."""
+    """Load PRODUCTS.csv, STORES.csv, FAQ.csv and (optional) KIOSKS.csv.
+    Call once at startup, not per request."""
     base = Path(directory)
+    kiosks = base / f"{KIOSKS_TABLE}.csv"
     return BusinessData.from_rows(
         products=_read_csv(base / f"{PRODUCTS_TABLE}.csv"),
         stores=_read_csv(base / f"{STORES_TABLE}.csv"),
         faqs=_read_csv(base / f"{FAQ_TABLE}.csv"),
+        kiosks=_read_csv(kiosks) if kiosks.exists() else [],
     )
 
 

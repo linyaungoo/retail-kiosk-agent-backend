@@ -8,6 +8,8 @@ from fastapi import Depends, Header, Request
 from app.config import Settings, get_settings
 from app.data.repository import BusinessRepository
 from app.errors import AppError, ErrorCode
+from app.models.kiosk import KioskPrincipal
+from app.realtime.service import RealtimeService
 from app.services.agent_service import AgentService
 from app.services.cache_service import BusinessDataCache
 from app.services.stt_service import SpeechToTextService
@@ -36,6 +38,13 @@ def get_cache(request: Request) -> BusinessDataCache:
     return cache
 
 
+def get_realtime(request: Request) -> RealtimeService:
+    service: RealtimeService | None = getattr(request.app.state, "realtime", None)
+    if service is None:
+        raise AppError(ErrorCode.REALTIME_NOT_CONFIGURED, "Realtime voice is not available.", 503)
+    return service
+
+
 def get_stt(request: Request) -> SpeechToTextService:
     stt: SpeechToTextService | None = getattr(request.app.state, "stt", None)
     if stt is None:
@@ -53,6 +62,7 @@ def get_tts(request: Request) -> TextToSpeechService:
 RepositoryDep = Annotated[BusinessRepository, Depends(get_repository)]
 AgentServiceDep = Annotated[AgentService, Depends(get_agent_service)]
 CacheDep = Annotated[BusinessDataCache, Depends(get_cache)]
+RealtimeDep = Annotated[RealtimeService, Depends(get_realtime)]
 STTDep = Annotated[SpeechToTextService, Depends(get_stt)]
 TTSDep = Annotated[TextToSpeechService, Depends(get_tts)]
 
@@ -74,14 +84,23 @@ async def verify_admin_access(
 async def verify_kiosk_key(
     settings: SettingsDep,
     x_kiosk_key: Annotated[str | None, Header()] = None,
-) -> None:
-    """Check X-Kiosk-Key when KIOSK_AUTH_ENABLED=true. Fails closed if no keys are set."""
+) -> KioskPrincipal:
+    """Check X-Kiosk-Key when KIOSK_AUTH_ENABLED=true (fails closed if no keys are set)
+    and return which kiosk the key is bound to, if any."""
     if not settings.kiosk_auth_enabled:
-        return
-    valid_keys = settings.kiosk_key_set()
-    if not valid_keys:
+        return KioskPrincipal()
+    bindings = settings.kiosk_key_bindings()
+    if not bindings:
         logger.error("kiosk_auth_misconfigured")
-    if not x_kiosk_key or not any(
-        hmac.compare_digest(x_kiosk_key.encode(), key.encode()) for key in valid_keys
-    ):
+    matched: KioskPrincipal | None = None
+    if x_kiosk_key:
+        for key, kiosk_id in bindings.items():
+            # Constant-time compare against every key (no early exit on a match).
+            if hmac.compare_digest(x_kiosk_key.encode(), key.encode()):
+                matched = KioskPrincipal(kiosk_id=kiosk_id)
+    if matched is None:
         raise AppError(ErrorCode.UNAUTHORIZED, "Invalid or missing kiosk key.", 401)
+    return matched
+
+
+KioskPrincipalDep = Annotated[KioskPrincipal, Depends(verify_kiosk_key)]

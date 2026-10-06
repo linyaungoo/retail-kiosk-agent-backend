@@ -1,0 +1,5 @@
+kiosk_id,store_id,name,active
+KIOSK-001,STORE-001,Downtown entrance,TRUE
+KIOSK-002,STORE-002,Hlaing ground floor,TRUE
+KIOSK-003,STORE-003,Mandalay checkout,TRUE
+KIOSK-099,STORE-001,Retired demo unit,FALSE

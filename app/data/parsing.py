@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from app.models.business import Availability, FaqEntry, FaqScope, Product, Store
+from app.models.business import Availability, FaqEntry, FaqScope, KioskRecord, Product, Store
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -122,6 +122,15 @@ def parse_store(row: Row) -> Store:
         customer_service_location=row.get("customer_service_location", ""),
         parking_available=parse_bool(row.get("parking_available", "")),
         restroom_available=parse_bool(row.get("restroom_available", "")),
+        active=_flag(row, "active", default=True),
+    )
+
+
+def parse_kiosk(row: Row) -> KioskRecord:
+    return KioskRecord(
+        kiosk_id=_required(row, "kiosk_id"),
+        store_id=_required(row, "store_id"),
+        name=row.get("name", ""),
         active=_flag(row, "active", default=True),
     )
 

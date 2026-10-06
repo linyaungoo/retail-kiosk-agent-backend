@@ -73,5 +73,5 @@ def test_headers_are_case_and_space_insensitive() -> None:
 
 
 def test_sample_data_counts(business_data: BusinessData) -> None:
-    # 38 product rows, 1 inactive; 4 stores, 1 inactive; 12 FAQ, 1 inactive.
-    assert business_data.counts() == {"products": 37, "stores": 3, "faqs": 11}
+    # 38 product rows, 1 inactive; 4 stores, 1 inactive; 12 FAQ, 1 inactive; 4 kiosks, 1 inactive.
+    assert business_data.counts() == {"products": 37, "stores": 3, "faqs": 11, "kiosks": 3}

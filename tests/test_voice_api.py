@@ -161,9 +161,8 @@ def test_large_data_dropped_from_header(client: TestClient, agent: StubAgent) ->
 
 
 def test_invalid_kiosk_rejected_before_stt(client: TestClient, stt: StubSTT) -> None:
-    response = client.post(
-        "/api/kiosk/voice", data={**FORM, "store_id": "STORE-999"}, files={"audio": WAV}
-    )
+    form = {**FORM, "kiosk_id": "KIOSK-UNKNOWN", "store_id": "STORE-999"}
+    response = client.post("/api/kiosk/voice", data=form, files={"audio": WAV})
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "INVALID_KIOSK"
     assert stt.calls == 0  # no STT cost for a misconfigured kiosk
@@ -204,7 +203,7 @@ def test_invalid_language(client: TestClient) -> None:
     assert response.json()["error"]["code"] == "INVALID_LANGUAGE"
 
 
-@pytest.mark.parametrize("field", ["organization_id", "store_id", "kiosk_id", "session_id"])
+@pytest.mark.parametrize("field", ["kiosk_id", "session_id"])
 def test_required_ids(client: TestClient, field: str) -> None:
     data = {k: v for k, v in FORM.items() if k != field}
     response = client.post("/api/kiosk/voice", data=data, files={"audio": WAV})
