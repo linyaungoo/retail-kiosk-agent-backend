@@ -70,9 +70,12 @@ Health endpoints:
 
 ## Docker and Cloud Run
 
+Run it locally in Docker with production settings, and test it with the web console
+from this machine. Step by step: [docs/DOCKER.md](docs/DOCKER.md).
+
 ```powershell
-docker build -t retail-kiosk-backend .
-docker run --rm -p 8081:8080 --env-file .env -v "${PWD}\credentials:/srv/credentials:ro" retail-kiosk-backend
+docker compose up -d --build                     # backend on http://127.0.0.1:8010
+python -m http.server 5500 --directory web       # console on http://localhost:5500
 ```
 
 The image is about 360 MB and runs as a non-root user. It holds no secrets: all

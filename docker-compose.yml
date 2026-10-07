@@ -1,0 +1,33 @@
+# Local Docker deployment of the kiosk backend. See docs/DOCKER.md.
+#   docker compose up -d --build     build and start (http://127.0.0.1:8010)
+#   docker compose logs -f           JSON logs
+#   docker compose down              stop
+services:
+  backend:
+    build: .
+    image: retail-kiosk-backend:local
+    container_name: retail-kiosk-backend
+    # Later files override earlier ones: .env (OpenAI key, sheet, models) ->
+    # deploy/docker.env (production settings) -> .env.docker (kiosk/admin keys).
+    env_file:
+      - .env
+      - deploy/docker.env
+      - .env.docker
+    ports:
+      # Host 8010: the console's default API URL and the Android emulator's
+      # default BACKEND_URL (http://10.0.2.2:8010).
+      - "8010:8080"
+    volumes:
+      # Google service account key, read-only (never baked into the image).
+      - ./credentials:/srv/credentials:ro
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=3)
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
