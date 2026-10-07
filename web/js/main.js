@@ -217,7 +217,12 @@ async function checkConnection() {
     chips.push(chip(data.realtime_available ? 'ok' : 'bad', 'Realtime'));
     chips.push(chip(data.chained_available ? 'ok' : 'bad', 'Push-to-talk'));
   } catch (e) {
-    chips.push(chip('bad', e.status === 401 ? 'Kiosk key missing or wrong' : e.message));
+    if (e.status === 401) {
+      chips.push(chip('bad', settings().kioskKey ? 'Kiosk key rejected' : 'This backend needs a kiosk key'));
+      $('kiosk-key').focus();
+    } else {
+      chips.push(chip('bad', e.message));
+    }
   }
   out.replaceChildren(...chips);
   const healthy = chips.every((c) => !c.classList.contains('bad'));
